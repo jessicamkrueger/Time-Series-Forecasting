@@ -17,6 +17,8 @@ for(i in c(3:ncol(power))) {
   power[,i] <- as.numeric(power[,i])
 }
 
+#lapply(power[3:ncol(power)], as.numeric)
+
 #combine date & time into one column
 power1 <- mutate(power, DateTime = paste(Date, Time, sep = ' '))
 power2 <- select(power1, DateTime, Global_active_power:Sub_metering_3)

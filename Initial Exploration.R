@@ -251,9 +251,19 @@ NovemberS1$Year <- as.factor(NovemberS1$Year) #need to make year a factor in ord
 
 #plot November data by year
 ggplot(NovemberS1) +
-  geom_line(aes(x=DayofMonth, y=Watt_Hour_AP, color = Year)) +
+  geom_line(aes(x=DayofMonth, y=Watt_Hour_AP, color=Year)) +
   scale_x_continuous(breaks = seq(1,30,1)) +
-  labs(title= "November Data for Sub Meter 1(Kitchen)", x="Day of the Month",
+  labs(title= "November Data for Sub Meter 1(Kitchen)", 
+       x="Day of the Month",
        y="Average Daily Watt-Hour Active Power")
 
+#plot Sub 3 data by year
+ggplot(data = filter(power2Tidy, SubMeter == "S3_WH_AC")) +
+  geom_line(aes(x=Day, y=Watt_Hour_AP, color = Year)) +
+  labs(title= "Sub Meter 3(WH & AC)", x="Month",
+       y="Average Daily Watt-Hour Active Power")
+
+power2Tidy$Month <- as.factor(power2Tidy$Month)
+power2Tidy$Year <- as.factor(power2Tidy$Year)
+power2Tidy$SubMeter <- as.factor(power2Tidy$SubMeter)
 saveRDS(power2Tidy, file = "power2Tidy.rds")
