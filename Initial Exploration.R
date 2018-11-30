@@ -7,6 +7,8 @@ library(ggfortify)
 library(vars)
 library(forecast)
 library(lubridate)
+library(scales)
+library(lemon)
 
 #Load data set
 setwd("~/Ubiqum/Project 4/Task 1/Original Data Set")
@@ -249,9 +251,19 @@ NovemberS1 <-filter(Novembers, Novembers$SubMeter == "S1_Kitchen")
 NovemberS1$Year <- as.factor(NovemberS1$Year) #need to make year a factor in order
 #to use it as a different color on the graph
 
-#plot November data by year
-ggplot(NovemberS1) +
+#plot November 2007 data by year
+NovS12007 <- filter(NovemberS1, Year == "2007")
+ggplot(NovS12007) +
   geom_line(aes(x=DayofMonth, y=Watt_Hour_AP, color=Year)) +
+  scale_x_continuous(breaks = seq(1,30,1)) +
+  labs(title= "November Data for Sub Meter 1(Kitchen)", 
+       x="Day of the Month",
+       y="Average Daily Watt-Hour Active Power")
+
+#plot November S1 data and facet by year
+ggplot(NovemberS1) +
+  geom_line(aes(x=DayofMonth, y=Watt_Hour_AP), color = "indianred") +
+  facet_rep_wrap(~Year, repeat.tick.labels = TRUE) +
   scale_x_continuous(breaks = seq(1,30,1)) +
   labs(title= "November Data for Sub Meter 1(Kitchen)", 
        x="Day of the Month",
