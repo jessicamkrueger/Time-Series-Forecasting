@@ -279,3 +279,90 @@ power2Tidy$Month <- as.factor(power2Tidy$Month)
 power2Tidy$Year <- as.factor(power2Tidy$Year)
 power2Tidy$SubMeter <- as.factor(power2Tidy$SubMeter)
 saveRDS(power2Tidy, file = "power2Tidy.rds")
+
+
+#create day of the week averages
+power2$dayofWeek <- wday(power2$DateTime, label = TRUE)
+dayAvgs <- power2 %>%
+  group_by(dayofWeek) %>%
+  summarise(S1avg = mean(S1_Kitchen, na.rm = TRUE), 
+            S2avg = mean(S2_Laundry, na.rm = TRUE),
+            S3avg = mean(S3_WH_AC, na.rm = TRUE),
+            S4avg = mean(S4_Rest, na.rm = TRUE))
+
+s1 <- ggplot(dayAvgs, aes(x=dayofWeek, y=S1avg)) +
+  geom_col(fill ="indianred") +
+  labs(x= "Day of the Week", y="Average Watt-Hour Used", 
+       title="Sub-meter 1: Kitchen")
+
+s2 <- ggplot(dayAvgs, aes(x=dayofWeek, y=S2avg)) +
+  geom_col(fill ="palegreen3") +
+  labs(x= "Day of the Week", y="Average Watt-Hour Used", 
+       title="Sub-meter 2: Laundry Room")
+
+s3 <- ggplot(dayAvgs, aes(x=dayofWeek, y=S3avg)) +
+  geom_col(fill ="turquoise3") +
+  labs(x= "Day of the Week", y="Average Watt-Hour Used", 
+       title="Sub-meter 3: Water Heater & A/C")
+
+s4 <- ggplot(dayAvgs, aes(x=dayofWeek, y=S4avg)) +
+  geom_col(fill ="purple1") +
+  labs(x= "Day of the Week", y="Average Watt-Hour Used", 
+       title="Sub-meter 4: Rest of House")
+
+grid.arrange(s1, s2, s3, s4, ncol=2)
+
+#try the tidy way - plot each day with submeter averages
+dayAvgsTidy <- gather(dayAvgs, SubMeter, AvgWH, S1avg:S4avg)
+ggplot(dayAvgsTidy, aes(x=SubMeter, y=AvgWH)) +
+  geom_col(aes(fill=SubMeter)) +
+  facet_rep_wrap(~dayofWeek,repeat.tick.labels = TRUE)
+
+
+#compare a specific month (December) and submeter (S1) from each of the four years
+December <- filter(power2Tidy, power2Tidy$Month == 12)
+DecS1 <-filter(December, December$SubMeter == "S1_Kitchen")
+DecS1$Year <- as.factor(DecS1$Year) #need to make year a factor in order
+#to use it as a different color on the graph
+
+#plot November S1 data and facet by year
+ggplot(DecS1) +
+  geom_line(aes(x=DayofMonth, y=Watt_Hour_AP), color = "indianred") +
+  facet_rep_wrap(~Year, repeat.tick.labels = TRUE) +
+  scale_x_continuous(breaks = seq(1,31,1)) +
+  labs(title= "December Data for Sub Meter 1(Kitchen)", 
+       x="Day of the Month",
+       y="Average Daily Watt-Hour Active Power")
+
+#plot Sub 3 data by year
+ggplot(data = filter(power2Tidy, SubMeter == "S3_WH_AC")) +
+  geom_line(aes(x=Day, y=Watt_Hour_AP, color = Year)) +
+  labs(title= "Sub Meter 3(WH & AC)", x="Month",
+       y="Average Daily Watt-Hour Active Power")
+
+power2Tidy$Month <- as.factor(power2Tidy$Month)
+power2Tidy$Year <- as.factor(power2Tidy$Year)
+power2Tidy$SubMeter <- as.factor(power2Tidy$SubMeter)
+saveRDS(power2Tidy, file = "power2Tidy.rds")
+
+#plot hour of day and day of week
+power2$hour <- hour(power2$DateTime)
+hourAvgs <- power2 %>%
+  group_by(hour, dayofWeek) %>%
+  summarise(S1_Kitchen = mean(S1_Kitchen, na.rm = TRUE), 
+            S2_Laundry = mean(S2_Laundry, na.rm = TRUE),
+            S3_WH_AC = mean(S3_WH_AC, na.rm = TRUE),
+            S4_Rest = mean(S4_Rest, na.rm = TRUE))
+hourAvgsTidy <- gather(hourAvgs, SubMeter, AvgWH, S1_Kitchen:S4_Rest)
+ggplot(hourAvgsTidy, aes(x=hour, y=AvgWH)) +
+  geom_line(aes(color=SubMeter)) +
+  facet_rep_wrap(~dayofWeek, repeat.tick.labels = TRUE, scales = "free_y") +
+  scale_x_continuous(breaks = seq(0,24, 2)) +
+  labs(x="Hour of Day", y="Average Watt-Hour", 
+       title="Daily Sub-meter Readings by Time of Day")
+
+#create tidy version of power2 data
+powTidy <- gather(power2, SubMeter, WattHour, S1_Kitchen:S4_Rest)
+
+saveRDS(powTidy, file="powTidy.rds")
+

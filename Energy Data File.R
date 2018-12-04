@@ -77,6 +77,8 @@ power2 <- rename(power2, S3_WH_AC = Sub_metering_3)
 #transform the Global Active Power to match the submeters
 power2 <- mutate(power2, S4_Rest = (round(GAP*1000/60) - S1_Kitchen - S2_Laundry - S3_WH_AC))
 power2$S4_Rest[power2$S4_Rest < 0] <- 0
+power2 <- mutate(power2, Total = (S1_Kitchen+S2_Laundry+
+                                             S3_WH_AC+S4_Rest))
 saveRDS(power2, file = "power2.rds")
 summary(power2)
 

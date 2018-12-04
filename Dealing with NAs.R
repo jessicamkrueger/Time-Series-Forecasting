@@ -166,5 +166,12 @@ ggplot(allNAs, aes(x=DayofMonth)) +
   labs(x="Day of the Month", y="Number of Minutes Missing",
        title = "Missing Submeter Data by Day of Month")
 
+#NA's by submeter (must tidy first)
+allNAsTidy <- gather(allNAs, SubMeter, WH, S1_Kitchen:S3_WH_AC)
+ggplot(allNAsTidy, aes(x=SubMeter)) +
+  geom_bar(aes(fill = SubMeter)) +
+  labs(x="Sub-Meter", y="Count of Missing Minutes", 
+       title="Missing Data by Sub-meter")+
+  scale_y_continuous(breaks = seq(0, 30000, 5000))
 
 saveRDS(allNAs, file="allNAs.rds")
