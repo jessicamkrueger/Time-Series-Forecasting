@@ -13,6 +13,7 @@ library(lemon)
 options(scipen=999)
 library(GGally)
 library(plotly)
+library(seasonal)
 
 setwd("~/Ubiqum/Project 4/Task 1/Original Data Set")
 power2 <- readRDS("~/Ubiqum/Project 4/Task 1/Original Data Set/power2.rds")
@@ -300,3 +301,32 @@ grid.arrange(c1, c2, c3, ncol=1)
 summary(LMfcast)
 accuracy(LMfcast)
 checkresiduals(LMfcast)
+
+
+#decompose the monthly time series 
+pMonthD <- decompose(pMonthClean)
+
+#plot the decomposition
+pMonthClean %>% decompose(type="multiplicative") %>%
+  autoplot() + xlab("Year") +
+  ggtitle("Decomposed Monthly Electric Consumption in Watt-Hours") 
+
+#summarize results
+summary(pMonthD)
+
+#plot the monthly X11 decomposition
+pMonthClean %>% seas(x11="") -> fit
+autoplot(fit) +
+  ggtitle("X11 Decomposed Monthly Electric Consumption")
+
+#decompose the daily time series 
+pDayD <- decompose(DayClean)
+
+#plot the classical decomposition
+DayClean %>% decompose(type="multiplicative") %>%
+  autoplot() + xlab("Year") +
+  ggtitle("Decomposed Daily Electric Consumption in Watt-Hours") 
+
+
+
+

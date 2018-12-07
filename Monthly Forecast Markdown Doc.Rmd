@@ -1,0 +1,141 @@
+---
+title: "Monthly Forecast"
+output:
+  html_document: default
+  pdf_document: default
+---
+Load all necessary libraries and data sets.
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(ggfortify)
+library(vars)
+library(forecast)
+library(fpp2)
+library(lubridate)
+library(scales)
+library(lemon)
+options(scipen=999)
+library(GGally)
+library(plotly)
+library(seasonal)
+
+setwd("~/Ubiqum/Project 4/Task 1/Original Data Set")
+power2 <- readRDS("~/Ubiqum/Project 4/Task 1/Original Data Set/power2.rds")
+```
+
+I start by creating a data frame containing montly totals in watt-hours for each sub meter as well as a total for the entire household. I then store this as a time-series object.
+
+```{r}
+pMonth <- power2 %>%
+  group_by(month=floor_date(DateTime, "month")) %>%
+  summarize_at(vars(S1_Kitchen:S4_Rest), sum, na.rm = TRUE) %>%
+  mutate(total = S1_Kitchen + S2_Laundry + S3_WH_AC + S4_Rest)
+
+pMonthTS <- ts(pMonth, frequency = 12, start = c(2006, 12))
+```
+
+We can now plot the time series to see that there is seasonality present in the monthly household consumption totals. We can also make a seasonal plot showing the seasonal variation by year.
+
+```{r}
+autoplot(pMonthTS[,"total"]) +
+  ggtitle("Total Household Electric Consumption 2006-2010") +
+  xlab("Year") +
+  ylab("Watt Hours")
+
+ggseasonplot(pMonthTS[,"total"], year.labels=TRUE) +
+  ylab("Watt Hours") +
+  ggtitle("Seasonal Plot: Total Household Consumption")
+```
+
+Next, I create a lag plot as well as an autocorrelation plot to further explore seasonality in the data set.
+
+```{r}
+gglagplot(pMonthTS[,6])
+
+ggAcf(pMonthTS[,6]) 
+```
+
+Using the tsclean function, we identify and replace any outliers (with suggested values) and missing values so that our model performs better.
+```{r}
+tsoutliers(pMonthTS[,6])
+pMonthClean <- tsclean(pMonthTS[,6])
+```
+
+Now, we partition the data into a training and testing set. I want to use a full year as a testing set in order to ensure my forecast for the next 12 months is useful.
+
+Next, I train a linear model on the testing set using trend and seasonality as predictors. I also plot the model against the original data.
+
+```{r}
+test1 <- window(pMonthClean,start=c(2006,12), end=c(2009,11))
+rest1 <- window(pMonthClean, start=c(2009,11))
+
+LMMonth <- tslm(test1 ~ trend + season)
+summary(LMMonth)
+
+autoplot(test1, series="Data") +
+  autolayer(fitted(LMMonth), series="Fitted") +
+  xlab("Year") + 
+  ylab("Watt Hours") +
+  ggtitle("Montly Electric Consumption")
+
+
+```
+
+I also check the residuals and plot the errors of the model.
+```{r message=FALSE, warning=FALSE}
+accuracy(LMMonth)
+checkresiduals(LMMonth)
+
+cbind(Data=pMonthClean, Fitted=fitted(LMMonth)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x = Data, y = Fitted)) +
+  geom_point() +
+  ylab("Fitted") + xlab("Actual values") +
+  ggtitle("Monthly Consumption - Linear Model Errors") +
+  geom_abline(intercept=0, slope=1)
+```
+
+Next, I apply the model to forecast testing set and plot the forecast against the acutal values from our testing set. I then examine the performance metrics of the testing and training sets as well as the plot to determine the model's accuracy.
+
+The auto-correlation plot of residuals has a significant peak at lag 8 meaning that there is still some useful information in the data that is not captured by my model.
+
+```{r}
+LMTestfcast <- forecast(LMMonth, h=12)
+
+autoplot(LMTestfcast, series="Forecast") +
+  autolayer(rest1, series="Observed") +
+  ggtitle("Monthly Consumption Forecast on Testing Data") +
+  xlab("Year") + ylab("Watt Hours")
+
+```
+
+
+Finally, I deploy the model on the entire data set to forecast the next 12 months of household energy consumption.
+```{r}
+LMMonthfinal <- tslm(pMonthClean ~ trend + season)
+LMFinalFcast <- forecast(LMMonthfinal, h=12)
+
+autoplot(LMFinalFcast)+
+  autolayer(fitted(LMMonthfinal), series="Model") +
+  ggtitle("Monthly Consumption Forecast for Next 12 Months") +
+  xlab("Year") + ylab("Watt Hours")
+```
+
+Now that we have forecasted the next 12 months of energy consumption, and we know that there is trend and seasonality to the data, we can decompose the time-series data to separate out the season and the trend. This plot shows the seasonal component, the trend component, and the remainder component of the time series data set.
+
+We see from the decomposed plot that there is siginficant seasonality, but we also see a decreasing trend which is not as easily visible from the full data set.
+
+```{r}
+pMonthD <- decompose(pMonthClean)
+
+pMonthClean %>% decompose(type="multiplicative") %>%
+  autoplot() + xlab("Year") +
+  ggtitle("Decomposed Monthly Electric Consumption in Watt-Hours")
+```
+
+
+
