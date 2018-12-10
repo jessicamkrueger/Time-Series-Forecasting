@@ -11,7 +11,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(gridExtra)
-library(ggfortify)
 library(vars)
 library(forecast)
 library(fpp2)
@@ -70,13 +69,13 @@ Now, we partition the data into a training and testing set. I want to use a full
 Next, I train a linear model on the testing set using trend and seasonality as predictors. I also plot the model against the original data.
 
 ```{r}
-test1 <- window(pMonthClean,start=c(2006,12), end=c(2009,11))
-rest1 <- window(pMonthClean, start=c(2009,11))
+train1 <- window(pMonthClean,start=c(2006,12), end=c(2009,11))
+test1 <- window(pMonthClean, start=c(2009,11))
 
-LMMonth <- tslm(test1 ~ trend + season)
+LMMonth <- tslm(train1 ~ trend + season)
 summary(LMMonth)
 
-autoplot(test1, series="Data") +
+autoplot(train1, series="Data") +
   autolayer(fitted(LMMonth), series="Fitted") +
   xlab("Year") + 
   ylab("Watt Hours") +
@@ -107,7 +106,7 @@ The auto-correlation plot of residuals has a significant peak at lag 8 meaning t
 LMTestfcast <- forecast(LMMonth, h=12)
 
 autoplot(LMTestfcast, series="Forecast") +
-  autolayer(rest1, series="Observed") +
+  autolayer(test1, series="Observed") +
   ggtitle("Monthly Consumption Forecast on Testing Data") +
   xlab("Year") + ylab("Watt Hours")
 
@@ -137,5 +136,99 @@ pMonthClean %>% decompose(type="multiplicative") %>%
   ggtitle("Decomposed Monthly Electric Consumption in Watt-Hours")
 ```
 
+This next section shows a seasonally-adjusted plot of the time series data.
+```{r}
+pMonth.stl <- stl(pMonthClean,"periodic")
+pMonth.sa <- seasadj(pMonth.stl)  
 
+autoplot(pMonthClean) +
+  ggtitle("Original Data")
+autoplot(pMonth.sa) +
+  ggtitle("Seasonally Adjusted Data")
+```
+
+
+
+Next, I'll use the Simple Exponential Smoothing (SES) model to create a model to predict monthly consumption. The prediction intervals show that there is considerable uncertainty in the future values over the next 12 months of the forecast period.
+
+```{r}
+sesMonth <- ses(pMonthClean, h = 12)
+
+round(accuracy(sesMonth),2)
+checkresiduals(sesMonth)
+
+autoplot(sesMonth) +
+  autolayer(fitted(sesMonth), series="Fitted") +
+  xlab("Year") +
+  ylab("Watt-Hours of Electric Consumption")
+```
+Now, we'll try the Holt Winters model using both additive and multiplicative seasonal parameters. From the summary statistics, we see that the multiplicative method performs best.
+
+```{r}
+fit1 <- hw(pMonthClean,seasonal="additive")
+fit2 <- hw(pMonthClean,seasonal="multiplicative")
+autoplot(pMonthClean) +
+  autolayer(fit1, series="HW additive forecasts", PI=FALSE) +
+  autolayer(fit2, series="HW multiplicative forecasts",
+    PI=FALSE) +
+  xlab("Year") +
+  ylab("Watt-Hours of Electric Consumption") +
+  guides(colour=guide_legend(title="Forecast"))
+
+autoplot(pMonthClean) +
+  autolayer(fitted(fit1), series = "HW additive forecasts") +
+  autolayer(fitted(fit2), series = "HW multiplicative forecasts") +
+  ggtitle("Fitted Values vs Observed Values")
+
+checkresiduals(fit1)
+summary(fit1)
+
+checkresiduals(fit2)
+summary(fit2)
+```
+In this section, I try a holt-winters multiplicative model with a damped trend.
+```{r}
+fit2.5 <- hw(pMonthClean,damped = TRUE, seasonal="multiplicative")
+autoplot(pMonthClean) +
+  autolayer(fit2.5, series="HW mult. damped forecasts", PI=FALSE) +
+  autolayer(fit2, series="HW multiplicative forecasts",
+    PI=FALSE) +
+  xlab("Year") +
+  ylab("Watt-Hours of Electric Consumption") +
+  guides(colour=guide_legend(title="Forecast"))
+
+summary(fit2.5)
+checkresiduals(fit2.5)
+
+```
+
+Next, I use hte ets() function to select the best model.
+
+```{r}
+fit3 <- ets(pMonthClean)
+summary(fit3)
+autoplot(fit3)
+checkresiduals(fit3)
+
+etS <- forecast(fit3, h=12)
+
+fit3 %>% forecast(h=12) %>%
+  autoplot() +
+  ylab("Electric Consumption in Watt-Hours")
+```
+
+In the next section, I use the auto.arima function to select an appropriate ARIMA model.
+ 
+```{r}
+fit4 <- auto.arima(pMonthClean)
+checkresiduals(fit4)
+summary(fit4)
+
+arimA <-forecast(fit4, h=12)
+
+autoplot(forecast(fit4, h=12))
+
+```
+
+```
 

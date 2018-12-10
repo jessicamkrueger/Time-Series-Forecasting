@@ -1,0 +1,141 @@
+---
+title: "SubMeter 3 Time Series Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+In order to perform a more specific analysis on each submeter, I created separate time series object for each submeter based on a total daily consumption for the full time period of the data set (2006 - 2010).
+
+I then decomposed and plotted each sub-meter time series to see seasonal patterns and trends exist in the data for each submeter. Not surprisingly, each of the sub-meters shows seasonality. Interestingly though, sub-meter 3 is the only submeter that shows an increasing trend.
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(vars)
+library(forecast)
+library(fpp2)
+library(lubridate)
+library(scales)
+library(lemon)
+options(scipen=999)
+library(GGally)
+library(plotly)
+library(seasonal)
+
+power2 <- readRDS("~/Ubiqum/Project 4/Task 1/Original Data Set/power2.rds")
+pDay <- power2 %>%
+  group_by(day=floor_date(DateTime, "day")) %>%
+  summarize_at(vars(S1_Kitchen:S4_Rest), sum, na.rm = TRUE) %>%
+  mutate(total = S1_Kitchen + S2_Laundry + S3_WH_AC + S4_Rest)
+
+pDayTS <- ts(pDay, frequency = 365, start = c(2006,350))
+pDayKit <- tsclean(pDayTS[,"S1_Kitchen"])
+
+KitDecomp <- decompose(pDayKit, type="multiplicative")
+autoplot(KitDecomp) +
+  ggtitle("Decomposed Time Series: Sub-meter 1 - Kitchen")
+
+pDayLau <- tsclean(pDayTS[,"S2_Laundry"])
+LaunDecomp <- decompose(pDayLau, type="multiplicative")
+autoplot(LaunDecomp) +
+  ggtitle("Decomposed Time Series: Sub-meter 2 - Laundry Room")
+
+pDayWH <- tsclean(pDayTS[,"S3_WH_AC"])
+WHDecomp <- decompose(pDayWH, type="multiplicative")
+autoplot(WHDecomp) +
+  ggtitle("Decomposed Time Series: Sub-meter 3 - Water Heater & A/C")
+
+pDayRest <- tsclean(pDayTS[,"S4_Rest"])
+RestDecomp <- decompose(pDayRest, type="multiplicative")
+autoplot(RestDecomp) +
+  ggtitle("Decomposed Time Series: Sub-meter 4 - Rest of House")
+
+
+```
+
+Let's take a closer look at data from sub-meter 3 to better understand what's happening with the energy consumption over time. By comparing the minute-by-minute data from the same week in November of each year. By choosing a time period during winter, we can be realtively certain that the only appliance be used during this time period is the water heater. It would be out of the ordinary for the air conditioner to be used during this time.
+
+From these charts, we can see that over the years, the water heater is activated more frequently and it's using a higher amount of watt-hours each time it's activated. This could mean a few different things. The water heater could be losing efficiency and performing worse over time. However, there could be other explanations. Maybe the family had a houseguest during this time and having an additional person in the house caused the water heater usage to increase. Perhaps the family turned the temperature on their water heater up so it had to work harder to maintain that temperature. 
+
+Becasue we cannot be certain, we should sample other time periods to see if the pattern persists.
+
+```{r}
+NovUsage <- power2 %>%
+  filter(week==45)
+
+ggplot(NovUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+   labs(title = "November Consumption - Water Heater", 
+       y= "Watt-Hours Consumed", x="Day of November")
+```
+Now, let's look at similar data from another time period. We'll look at January and February data this time. 
+
+In the January and February data, we see that the water heater is at times staying on for much longer periods of time in 2009 and 2010. Also, in 2010, the water heater is using a higher amount of watt-hours of energy (sometimes 30 wh) when it's used. In the earlier years, it's using between 15-20 watt-hours when it's used.
+
+We still cannot rule out a change in the family's habits that causing the increase in the usage of the water heater, however, we can be more certain that there is indeed a pattern of higher consumption over time of the water heater specifically. 
+
+```{r}
+JanUsage <- power2 %>%
+  filter(week==3)
+
+ggplot(JanUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+  labs(title = "January Consumption - Water Heater", 
+       y= "Watt-Hours Consumed", x="Day of January")
+
+FebUsage <- power2 %>%
+  filter(week==6)
+
+ggplot(FebUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+   labs(title = "February Consumption - Water Heater", 
+       y= "Watt-Hours Consumed", x="Day of February")
+
+```
+
+Now, let's look at the air conditioner. By sampling time periods in the summer, we can try to isolate the usage of the air conditioner and see if there are any interesting consumption patterns. Below are samples from July, August, and September.
+
+The pattern in the summer is harder to see which could be because the energy consumption of the air conditioner is more directly impacted by the weather. In this case, it would be helpful to know what temperature the A/C is set at and what the outside temperature was. One thing looks clear though, the family either didn't have an air conditioner or they didn't use it in 2007.
+
+Based on this analysis though, it seems like the water heater is definitely using more energy and the family should consider alterning their habits (lowering the water heater temperature perhaps) or look into servicing/replacing the water heater to create more efficiency. 
+
+```{r}
+JulyUsage <- power2 %>%
+  filter(week==28)
+
+ggplot(JulyUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+   labs(title = "July Consumption - Water Heater & A/C", 
+       y= "Watt-Hours Consumed", x="Day of July")
+
+AugUsage <- power2 %>%
+  filter(week==32)
+
+ggplot(AugUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+   labs(title = "August Consumption - Water Heater & A/C", 
+       y= "Watt-Hours Consumed", x="Day of August")
+
+SepUsage <- power2 %>%
+  filter(week==38)
+
+ggplot(SepUsage, aes(x=DateTime, y=S3_WH_AC)) +
+  geom_line() +
+  facet_wrap(~year, scales = "free_x", ncol = 1) +
+   labs(title = "September Consumption - Water Heater & A/C", 
+       y= "Watt-Hours Consumed", x="Day of September")
+```
+
