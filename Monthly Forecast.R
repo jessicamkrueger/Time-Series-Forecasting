@@ -3,7 +3,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(gridExtra)
-library(ggfortify)
 library(vars)
 library(forecast)
 library(fpp2)
@@ -48,7 +47,7 @@ ggAcf(pMonthTS[,6])
 tsoutliers(pMonthTS[,6])
 
 #use tsclean function to replace outliers with suggestions
-pMonthClean <- tsclean(pMonthTS[,6])
+pMonthTS[,6] <- tsclean(pMonthTS[,6])
 
 # Set training data from Dec 2006 to Jan 2010
 test1 <- window(pMonthClean,start=c(2006,12), end=c(2010,1))
@@ -110,7 +109,61 @@ autoplot(fit) +
   ggtitle("X11 Decomposed Monthly Electric Consumption")
 
 
+summary(LMFinalFcast)
+str(LMFinalFcast)
+MonthFC <- as.data.frame(summary(LMFinalFcast))
+
+library(data.table)
+setDT(MonthFC, keep.rownames = TRUE)[]
+
+#using .147 EUR /kWh as standard cost
+MonthCosts <- MonthFC %>%
+  mutate(`Point Forecast`= `Point Forecast`/1000) %>%
+  mutate(`Lo 80`= `Lo 80`/1000) %>% 
+  mutate(`Hi 80`= `Hi 80`/1000) %>%
+  mutate(`Lo 95`= `Lo 95`/1000) %>%
+  mutate(`Hi 95`= `Hi 95`/1000) %>%
+  mutate_at(vars(`Point Forecast`:`Hi 95`), (funs(cost = . *.147))) %>%
+  gather(Forecast, kWh, `Point Forecast`:`Hi 95`)  %>%
+  select(rn, Forecast, kWh) %>%
+  mutate(Cost = kWh*.147)
+  
+  
+#plot predictions for monthly bill (only showing 95PI)
+MonthCosts$Month <- parse_date_time(MonthCosts$rn, "my") 
+MonthCosts95 <- filter(MonthCosts, Forecast != "Lo 80" & Forecast != "Hi 80")
+
+ggplot(MonthCosts95, aes(x=Month, y=Cost, color=Forecast, group=Forecast)) +
+  geom_line() +
+  scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
+  labs(x="Month", y="Predicted Electric Bill", 
+       title = "Household Electric Bill: 12 Month Forecast")
+
+#try a pointrange plot
+MonthPR <- MonthFC %>%
+  mutate_at(vars(`Point Forecast`,`Hi 95`, `Lo 95`), 
+            (funs(cost = round((. /1000)*.147)))) %>%
+  dplyr::rename(Point_Forecast = `Point Forecast_cost`, 
+                Forecast_Min = `Lo 95_cost`,
+                Forecast_Max = `Hi 95_cost`,
+                Month = rn)
+
+MonthPR$Month <- parse_date_time(MonthPR$Month, "my")        
+#add average to MonthPR
+mean(MonthPR$Point_Forecast)
+#add column that shows is point forecast is above or below average
+MonthPR$Relative_Cost <- (MonthPR$Point_Forecast < mean(MonthPR$Point_Forecast))
 
 
-
+ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
+  geom_pointrange(aes(ymin=Forecast_Min, ymax=Forecast_Max, 
+                      color = Relative_Cost), size = 1) +
+  geom_text(aes(label = Point_Forecast), nudge_y = 30) +
+  scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
+  labs(x="Month", y="Predicted Bill Cost", 
+       title = "Household Electric Bill: 12 Month Forecast",
+       subtitle = "With 95% Prediction Interval Range") +
+  scale_x_datetime(date_labels="%b %Y", date_breaks ="1 month") +
+  scale_color_discrete("Bill Type", 
+                      labels=c("Above Average", "Below Average"))
 

@@ -31,6 +31,12 @@ library(plotly)
 library(seasonal)
 
 power2 <- readRDS("~/Ubiqum/Project 4/Task 1/Original Data Set/power2.rds")
+
+pMonth <- power2 %>%
+  group_by(month=floor_date(DateTime, "month")) %>%
+  summarize_at(vars(S1_Kitchen:S4_Rest), sum, na.rm = TRUE) %>%
+  mutate(total = S1_Kitchen + S2_Laundry + S3_WH_AC + S4_Rest)
+
 pDay <- power2 %>%
   group_by(day=floor_date(DateTime, "day")) %>%
   summarize_at(vars(S1_Kitchen:S4_Rest), sum, na.rm = TRUE) %>%
@@ -103,6 +109,24 @@ ggplot(FebUsage, aes(x=DateTime, y=S3_WH_AC)) +
        y= "Watt-Hours Consumed", x="Day of February")
 
 ```
+
+Let's take a look at some summary data to confirm the information we see in the above visualizations. From this chart of the monthly average watt-hours consumed in 2007-2010, we can see that that average is increasing for sub-meter 3 which includes the water heater and air conditioner. We can also see that the average is decreasing for the other sub-meters.
+
+```{r}
+year <- pMonth %>%
+  mutate(year = year(month)) %>%
+  group_by(year) %>%
+  summarize(WH_AC = mean(S3_WH_AC), Laundry = mean(S2_Laundry),
+            Kitchen = mean(S1_Kitchen), Rest = mean(S4_Rest)) %>%
+  gather(SubMeter, MonthAvg, WH_AC:Rest)
+
+ggplot(subset(year, year>2006), aes(x=year, y=MonthAvg)) +
+  geom_line(aes(color=SubMeter), size=2) +
+  labs(x="Year", y="Average Watt Hours Consumed",
+       title="Monthly Average Watt Hours Consumed by Sub-meter",
+       color = "Sub-meter")
+```
+
 
 Now, let's look at the air conditioner. By sampling time periods in the summer, we can try to isolate the usage of the air conditioner and see if there are any interesting consumption patterns. Below are samples from July, August, and September.
 
