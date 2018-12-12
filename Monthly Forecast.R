@@ -167,3 +167,26 @@ ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
   scale_color_discrete("Bill Type", 
                       labels=c("Above Average", "Below Average"))
 
+
+#add last year's values to the forecast dataframe
+LYkWh <- pMonth[37:48,] %>%
+  mutate(kWh = total/1000) %>%
+  mutate(costLY = round(kWh*.147))
+
+#add LY cost to forecast datafram
+MonthPR$LYcost <- LYkWh$costLY
+
+ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
+  geom_pointrange(aes(ymin=Forecast_Min, ymax=Forecast_Max, 
+                      color = Relative_Cost), size = 1) +
+  geom_text(aes(label = Point_Forecast), nudge_y = 30) +
+  scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
+  labs(x="Month", y="Predicted Bill Cost", 
+       title = "Household Electric Bill: 12 Month Forecast",
+       subtitle = "With 95% Prediction Interval Range") +
+  scale_x_datetime(date_labels="%b %Y", date_breaks ="1 month") +
+  scale_color_discrete("Bill Prediction", 
+                       labels=c("Above Average", "Below Average")) +
+  geom_point(aes(y=LYcost, fill = "Last Year's Bill"), color="purple", size=2) +
+  scale_fill_manual(name = "", 
+                    values = c("Last Year's Bill" = "purple"))

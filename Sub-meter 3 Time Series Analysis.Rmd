@@ -65,6 +65,28 @@ autoplot(RestDecomp) +
   ggtitle("Decomposed Time Series: Sub-meter 4 - Rest of House")
 
 
+
+#plot just the trend components of each submeter
+KitDecomp <- decompose(pDayKit, type="multiplicative")
+t1 <- autoplot(KitDecomp$trend) +
+  ggtitle("Trend: Sub-meter 1 - Kitchen")
+
+pDayLau <- tsclean(pDayTS[,"S2_Laundry"])
+LaunDecomp <- decompose(pDayLau, type="multiplicative")
+t2 <- autoplot(LaunDecomp$trend) +
+  ggtitle("Trend: Sub-meter 2 - Laundry Room")
+
+pDayWH <- tsclean(pDayTS[,"S3_WH_AC"])
+WHDecomp <- decompose(pDayWH, type="multiplicative")
+t3 <- autoplot(WHDecomp$trend) +
+  ggtitle("Trend: Sub-meter 3 - Water Heater & A/C")
+
+pDayRest <- tsclean(pDayTS[,"S4_Rest"])
+RestDecomp <- decompose(pDayRest, type="multiplicative")
+t4 <- autoplot(RestDecomp$trend) +
+  ggtitle("Trend: Sub-meter 4 - Rest of House")
+
+grid.arrange(t1, t2, t3, t4, ncol = 2)
 ```
 
 Let's take a closer look at data from sub-meter 3 to better understand what's happening with the energy consumption over time. By comparing the minute-by-minute data from the same week in November of each year. By choosing a time period during winter, we can be realtively certain that the only appliance be used during this time period is the water heater. It would be out of the ordinary for the air conditioner to be used during this time.
@@ -161,5 +183,74 @@ ggplot(SepUsage, aes(x=DateTime, y=S3_WH_AC)) +
   facet_wrap(~year, scales = "free_x", ncol = 1) +
    labs(title = "September Consumption - Water Heater & A/C", 
        y= "Watt-Hours Consumed", x="Day of September")
+```
+Now let's look at approximately how much more the WH is costing the homeowner from 2007 compared to 2010. The estimated annual cost is increasing as the consumption increases. There is a 20% increase in the cost from 2007 to 2010. By 2010, Sub-meter 3 is costing approximately $87 more a year than it did in 2007. 
+
+The chart below shows the gradual increase which can be hard to notice month after month, year after year. However, when you compare 2007 to 2010, you can see there is a significant increase in the cost.
+
+```{r}
+
+#create monthly average and estimated annual cost
+year <- year %>%
+  mutate(kWh = MonthAvg/1000) %>%
+  mutate(cost = kWh*.147) %>%
+  mutate(annualCost = cost*12)
+
+#plot the estimated annual costs for just S3
+year %>% filter(SubMeter == "WH_AC" & year != 2006) %>% 
+  ggplot(aes(x = year, y = annualCost)) + 
+  geom_col(aes(fill = kWh)) +
+  labs(x="Year", y="Estimated Cost",
+       title= "Estimated Annual Cost of Sub-meter 3",
+       subtitle = "Water Heater and Air Conditioner") +
+  scale_y_continuous(labels = dollar, breaks = seq(0,600, 50))
+
+
+
+
+
+```
+
+Now let's look at the total annual estimated energy costs for the entire houseold.
+
+```{r}
+annualTot <- year %>%
+ group_by(year) %>%
+ summarize(total = sum(annualCost)) %>%
+  filter(year != 2006)
+
+ggplot(annualTot, aes(x=year, y=total)) +
+  geom_line(color="red", size = 2) +
+  scale_y_continuous(labels = dollar, breaks = seq(1300, 1500, 25)) +
+  labs(x="Year", y="Estimated Energy Cost",
+       title = "Annual Estimated Household Energy Costs")
+
+```
+
+Total minutes used for week 45 for each year.
+```{r}
+
+NovUsage1 <- NovUsage %>%
+  filter(S3_WH_AC != 0) %>%
+  group_by(year) %>%
+  summarize(avgWH = median(S3_WH_AC))
+
+NovUsage07 <- NovUsage %>%
+  filter(year == 2007 & S3_WH_AC != 0)
+#3798 minutes = 63 hours
+
+NovUsage08 <- NovUsage %>%
+  filter(year == 2008 & S3_WH_AC != 0)
+#3496 minutes = 58 hours
+
+NovUsage09 <- NovUsage %>%
+  filter(year == 2009 & S3_WH_AC != 0)
+#8034 minutes = 133 hours
+
+NovUsage10 <- NovUsage %>%
+  filter(year == 2010 & S3_WH_AC != 0)
+#7584 minutes = 126 hours
+summary(NovUsage10$S3_WH_AC)
+summary(NovUsage07$S3_WH_AC)
 ```
 
