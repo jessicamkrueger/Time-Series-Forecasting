@@ -123,6 +123,12 @@ autoplot(LMFinalFcast)+
   autolayer(fitted(LMMonthfinal), series="Model") +
   ggtitle("Monthly Consumption Forecast for Next 12 Months") +
   xlab("Year") + ylab("Watt Hours")
+
+summary(LMMonthfinal)
+accuracy(LMMonthfinal)
+checkresiduals(LMMonthfinal)
+
+summary(LMFinalFcast)
 ```
 
 Now that we have forecasted the next 12 months of energy consumption, and we know that there is trend and seasonality to the data, we can decompose the time-series data to separate out the season and the trend. This plot shows the seasonal component, the trend component, and the remainder component of the time series data set.
@@ -165,8 +171,12 @@ autoplot(sesMonth) +
 ```
 Now, we'll try the Holt Winters model using both additive and multiplicative seasonal parameters. From the summary statistics, we see that the multiplicative method performs best.
 
+alpha = weight give to the level component of the model
+beta = weight given to the trend component of the model
+gamme = weight given to the seasonal component of the model
+
 ```{r}
-fit1 <- hw(pMonthClean,seasonal="additive")
+fit1 <- hw(pMonthClean,seasonal="additive", alpha = .2, gamma = .01)
 fit2 <- hw(pMonthClean,seasonal="multiplicative")
 autoplot(pMonthClean) +
   autolayer(fit1, series="HW additive forecasts", PI=FALSE) +

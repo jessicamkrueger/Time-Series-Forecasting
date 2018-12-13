@@ -181,7 +181,7 @@ ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
                       color = Relative_Cost), size = 1) +
   geom_text(aes(label = Point_Forecast), nudge_y = 30) +
   scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
-  labs(x="Month", y="Predicted Bill Cost", 
+  labs(x=NULL, y="Predicted Bill Cost", 
        title = "Household Electric Bill: 12 Month Forecast",
        subtitle = "With 95% Prediction Interval Range") +
   scale_x_datetime(date_labels="%b %Y", date_breaks ="1 month") +
@@ -189,4 +189,54 @@ ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
                        labels=c("Above Average", "Below Average")) +
   geom_point(aes(y=LYcost, fill = "Last Year's Bill"), color="purple", size=2) +
   scale_fill_manual(name = "", 
-                    values = c("Last Year's Bill" = "purple"))
+                    values = c("Last Year's Bill" = "purple")) +
+  geom_hline(yintercept=109.6667, linetype = "dotted") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "gray"),
+        title = element_text(colour = "dark gray"))
+
+
+#try ribbon plot
+ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
+  geom_ribbon(aes(ymin=Forecast_Min, ymax=Forecast_Max), fill = "gray85") +
+  scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
+  geom_hline(yintercept=109.6667, linetype = "dashed", color = "gray55") +
+  geom_text(aes(label = Point_Forecast), nudge_y = 5, color = "dark blue") +
+  labs(x=NULL, y="Predicted Cost", 
+       title = "Household Electric Bill: 12 Month Forecast",
+       subtitle = "With 95% Prediction Interval Range") +
+  scale_x_datetime(date_labels="%b %Y", date_breaks ="1 month") +
+  scale_color_discrete("Bill Prediction", 
+                       labels=c("Above Average", "Below Average")) +
+  geom_line(aes(y=Point_Forecast), color = "dark blue", size = 1) +
+  scale_fill_manual(name = "", 
+                    values = c("Last Year's Bill" = "purple")) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "gray"),
+        title = element_text(colour = "gray28"))
+
+#try ribbon plot with last year's bill
+ggplot(MonthPR, aes(x=Month, y=Point_Forecast)) +
+  geom_ribbon(aes(ymin=Forecast_Min, ymax=Forecast_Max), fill = "gray85") +
+  scale_y_continuous(labels = dollar, breaks = seq(40, 180, 10)) +
+  labs(x=NULL, y=NULL, 
+       title = "Household Electric Bill: 12 Month Forecast",
+       subtitle = "Compared to Last Year's Actual Bill") +
+  scale_x_datetime(date_labels="%b %Y", date_breaks ="1 month") +
+  scale_color_discrete("Bill Prediction", 
+                       labels=c("Above Average", "Below Average")) +
+  geom_line(aes(y=LYcost, fill = "Last Year's Bill"), color="dark blue", size=1) +
+  geom_line(aes(y=Point_Forecast), color = "gray55") +
+  scale_fill_manual(name = "", 
+                    values = c("Last Year's Bill" = "purple")) +
+  geom_hline(yintercept=109.6667, linetype = "dashed", color = "gray55") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "gray"),
+        title = element_text(colour = "gray28")) 
+  

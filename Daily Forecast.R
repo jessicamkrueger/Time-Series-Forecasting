@@ -137,7 +137,7 @@ for(K in seq(3)) {
 }               
 
 
-fcast9 <- forecast(bestfit,
+fcast9 <- forecast(bestfit),
                xreg=fourier(pdayMSTS[,6], K=c(bestK, bestK), h=90))
 autoplot(fcast9)
 checkresiduals(fcast9)

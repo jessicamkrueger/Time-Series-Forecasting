@@ -18,7 +18,7 @@ power2Tidy <- readRDS("~/Ubiqum/Project 4/Task 1/Original Data Set/power2Tidy.rd
 saveRDS(power2, file="power2.rds")
 
 #what is total power used by each sub meter?
-SubSums <- summarize_all(power2, sum, na.rm = TRUE)
+SubSums <- summarize_at(power2, vars(S1_Kitchen:S4_Rest), sum, na.rm = TRUE)
 SubSums1 <- select(SubSums, S1_Kitchen:S4_Rest)
 SubSums2 <- gather(SubSums1, Sub_Meter, Total_WH_Active_Energy)
 
@@ -29,17 +29,25 @@ ggplot(SubSums2, aes(x=Sub_Meter, y=Total_WH_Active_Energy)) +
        title = "Total Watt-Hour of Active Energy Used by Sub Meter - 2006-2010")
 
 #what is average power used by each submeter
-SubAvg <- summarize_all(power2, mean, na.rm = TRUE)
+SubAvg <- summarize_at(power2,vars(S1_Kitchen:S4_Rest), mean, na.rm = TRUE)
 SubAvg1 <- dplyr::select(SubAvg, S1_Kitchen:S4_Rest) #use dplyr::select() because 
 #select is masked by another loaded library right now
 SubAvg2 <- gather(SubAvg1, Sub_Meter, Avg_WH_Active_Energy)
 
 #Plot avg watt-hours used by sub meter
 ggplot(SubAvg2, aes(x=Sub_Meter, y=Avg_WH_Active_Energy)) +
-  geom_col(aes(fill = Sub_Meter)) +
-  labs(x="Sub Meter", y="Average Watt-Hour of Active Energy Used", 
-       title = "Average Watt-Hour of Active Energy Used by Sub Meter - 2006-2010")
-
+  geom_col() +
+  labs(x=NULL, y="Watt-Hour", 
+       title = "Average Watt-Hour of Active Energy Used by Sub Meter",
+       subtitle = "2006-2010") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "gray28"),
+        axis.text.x = element_text(colour="grey28",size=15),
+        title = element_text(colour = "gray28")) +
+  scale_x_discrete(labels = c("Kitchen", "Laundry Room", 
+                              "Water Heater & A/C", "Rest of House"))
 
 
 #what is median power used by each submeter
